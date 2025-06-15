@@ -1,7 +1,12 @@
 import random
-
+import datetime
 from synchrophasor.frame import ConfigFrame2
 from synchrophasor.pmu import Pmu
+
+import sys
+sys.path.append(r"\2023-python-gsg") # Adjust the path as needed
+
+from pmu_producer import send_to_redpanda
 
 
 """
@@ -45,10 +50,30 @@ if __name__ == "__main__":
 
     while True:
         if pmu.clients:
-            pmu.send_data(phasors=[(random.uniform(215.0, 240.0), random.uniform(-0.1, 0.3)),
-                                   (random.uniform(215.0, 240.0), random.uniform(1.9, 2.2)),
-                                   (random.uniform(215.0, 240.0), random.uniform(3.0, 3.14))],
-                          analog=[9.91],
-                          digital=[0x0001])
+            phasors = [
+                (random.uniform(215.0, 240.0), random.uniform(-0.1, 0.3)),
+                (random.uniform(215.0, 240.0), random.uniform(1.9, 2.2)),
+                (random.uniform(215.0, 240.0), random.uniform(3.0, 3.14))
+            ]
+            analog = [9.91]
+            digital = [0x0001]
+            pmu.send_data(phasors=phasors, analog=analog, digital=digital)
+
+            # Build measurement dict in the same format as get_measurements()
+            measurement = {
+                "stream_id": cfg.get_stream_id_code(),
+                "stat": "ok",
+                "phasors": phasors,
+                "analog": analog,
+                "digital": digital,
+                "frequency": cfg.get_fnom(),  # or add freq offset if needed
+                "rocof": 0.0
+            }
+            data = {
+                "pmu_id": cfg.get_id_code(),
+                "time": datetime.datetime.now().timestamp(),
+                "measurements": [measurement]
+            }
+            send_to_redpanda("pmu_measurements", data)
 
     pmu.join()
