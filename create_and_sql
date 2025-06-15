@@ -1,0 +1,17 @@
+CREATE TABLE pmu_test (
+ pmu_id INTEGER,
+ time TIMESTAMPTZ,
+ measurements JSON
+);
+
+SELECT 
+"time",
+(measurements->0->>'stream_id')::int AS stream_id,
+  measurements->0->'phasors' AS phasors,
+  measurements->0->'analog' AS analog,
+  measurements->0->'digital' AS digital,
+  (measurements->0->>'frequency')::float AS frequency,
+  (measurements->0->>'rocof')::float AS rocof,
+measurements  
+FROM pmu_test 
+LIMIT 50
